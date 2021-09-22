@@ -1,28 +1,32 @@
 const express = require('express')
       router = express.Router()
       Blog = require('../models/blog')
-require('express-async-errors')
+      User = require('../models/user')
+      require('express-async-errors')
+      validateUser = require('../utils/middleware').validateUser
 
-router.get('/', (request, response) => {
-  Blog
-    .find({})
-    .then(blogs => {
-      response.json(blogs)
-    })
+router.get('/', async (request, response) => {
+  let blogs = await  Blog.find({}).populate('user', {username: 1, name: 1})
+  response.json(blogs)
 })
 
-router.post('/', (request, response) => {
+router.post('/', validateUser, async (request, response) => {
   let blog = request.body
+
   if(!blog.title && !blog.url) return response.status(400).send()
   if(!blog.likes) blog['likes'] = 0
 
+  let user = await User.findById(request.user.id)
+
+  blog['user'] = user._id
+
   const new_blog = new Blog(blog)
 
-  new_blog
-    .save()
-    .then(result => {
-      response.status(201).json(result)
-    })
+  let resp = await new_blog.save()
+  user['blogs'] = !!user.blogs ? user.blogs.concat(resp._id) : [resp._id]
+  await user.save()
+
+  response.status(201).json(resp)
 })
 
 router.put('/:id', async (req, res) => {
@@ -32,7 +36,11 @@ router.put('/:id', async (req, res) => {
   res.json(updated)
 })
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', validateUser, async (req, res) => {
+  let deletingBlog = await Blog.findById(req.params.id)
+
+  if(deletingBlog.user.toString() !== req.user.id.toString()) return res.status(400).send('invalid token')
+
   let deleteData = await Blog.findByIdAndRemove(req.params.id)
 
   if(deleteData) return res.send()
