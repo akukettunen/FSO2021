@@ -16,7 +16,7 @@ router.post('/', validateUser, async (request, response) => {
   if(!blog.title && !blog.url) return response.status(400).send()
   if(!blog.likes) blog['likes'] = 0
 
-  let user = await User.findById(request.user.id)
+  let user = await User.findById(request.user.id || request.user)
 
   blog['user'] = user._id
 
@@ -30,9 +30,14 @@ router.post('/', validateUser, async (request, response) => {
 })
 
 router.put('/:id', async (req, res) => {
-  const updated_blog = req.body
+  const { blog } = req.body
 
-  const updated = await Blog.findByIdAndUpdate(req.params.id, updated_blog, { new: true })
+  console.log(blog)
+
+  // Patentti
+  blog['user'] = blog.user['id']
+
+  const updated = await Blog.findByIdAndUpdate(req.params.id, blog, { new: true })
   res.json(updated)
 })
 
