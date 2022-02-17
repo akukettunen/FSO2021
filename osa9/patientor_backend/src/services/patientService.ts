@@ -1,8 +1,8 @@
-import { Patient, newPatient, nonsensitivePatient } from '../../types';
-import patientData from '../../data/patients.json';
+import { Patient, newPatient, nonsensitivePatient, EntryWithoutId, Entry } from '../../types';
+import patientData from '../../data/patients';
 import { v1 as uuid } from 'uuid';
 
-const patients: Array<Patient> = patientData as Array<Patient>;
+let patients: Array<Patient> = patientData;
 
 const getPatients = (): Patient[] => {
   return patients;
@@ -29,8 +29,33 @@ const addPatient = (patient: newPatient): Patient => {
   return newPatient as Patient;
 };
 
+const patientById = (id: string): Patient | undefined => {
+  const patients = getPatients();
+
+  const patient = patients.find(p => p.id == id);
+
+  return patient;
+};
+
+const addEntryForPatient = (entry: EntryWithoutId, patient_id: string) => {
+  const newPats = [...getPatients()];
+
+  const ind = newPats.findIndex(pat => {
+    return pat.id == patient_id
+  })
+  if(ind < 0) throw new Error('Patient not found :(')
+
+  const pat_entries: Entry[] = newPats[ind]['entries'] || [];
+
+  const entries = pat_entries.concat({...entry, id: uuid()});
+
+  patients[ind] = { ...patients[ind], entries }
+}
+
 export default {
   getPatients,
   getNonSensitivePatients,
-  addPatient
+  addPatient,
+  patientById,
+  addEntryForPatient
 };
